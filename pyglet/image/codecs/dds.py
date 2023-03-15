@@ -103,13 +103,24 @@ class DDPIXELFORMAT(_FileStruct):
     ]
 
 
+class DDDXT10HEADER(_FileStruct):
+    _fields = [
+        ('dxgiFormat', 'I'),
+        ('resourceDimension', 'I'),
+        ('miscFlag', 'I'),
+        ('arraySize', 'I'),
+        ('miscFlags2', 'I'),
+    ]
+
+
 _compression_formats = {
-    (b'DXT1', False): (GL_COMPRESSED_RGB_S3TC_DXT1_EXT,  s3tc.decode_dxt1_rgb),
-    (b'DXT1', True):  (GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, s3tc.decode_dxt1_rgba),
-    (b'DXT3', False): (GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, s3tc.decode_dxt3),
-    (b'DXT3', True):  (GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, s3tc.decode_dxt3),
-    (b'DXT5', False): (GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
-    (b'DXT5', True):  (GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
+    (b'DXT1', False): ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGB_S3TC_DXT1_EXT,  s3tc.decode_dxt1_rgb),
+    (b'DXT1', True):  ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, s3tc.decode_dxt1_rgba),
+    (b'DXT3', False): ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, s3tc.decode_dxt3),
+    (b'DXT3', True):  ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, s3tc.decode_dxt3),
+    (b'DXT5', False): ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
+    (b'DXT5', True):  ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
+    (b'DX10', False): ('GL_ARB_texture_compression_rgtc', GL_COMPRESSED_RG_RGTC2,           s3tc.decode_bc5),
 }
 
 
@@ -125,6 +136,10 @@ class DDSImageDecoder(codecs.ImageDecoder):
         desc = DDSURFACEDESC2(header)
         if desc.dwMagic != b'DDS ' or desc.dwSize != 124:
             raise ImageDecodeException('Invalid DDS file (incorrect header).')
+
+        if desc.ddpfPixelFormat.dwFourCC == b'DX10':
+            dxt10_header_buf = file.read(DDDXT10HEADER.get_size())
+            dxt10_header = DDDXT10HEADER(dxt10_header_buf)
 
         width = desc.dwWidth
         height = desc.dwHeight
@@ -151,7 +166,7 @@ class DDSImageDecoder(codecs.ImageDecoder):
         if selector not in _compression_formats:
             raise ImageDecodeException('Unsupported texture compression %s' % desc.ddpfPixelFormat.dwFourCC)
 
-        dformat, decoder = _compression_formats[selector]
+        extension, dformat, decoder = _compression_formats[selector]
         if dformat == GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
             block_size = 8
         else:
@@ -172,7 +187,7 @@ class DDSImageDecoder(codecs.ImageDecoder):
             w >>= 1
             h >>= 1
 
-        image = CompressedImageData(width, height, dformat, datas[0], 'GL_EXT_texture_compression_s3tc', decoder)
+        image = CompressedImageData(width, height, dformat, datas[0], extension, decoder)
         level = 0
         for data in datas[1:]:
             level += 1

@@ -352,3 +352,7 @@ def decode_dxt5(data, width, height):
         image_offset += pitch * 3 * advance_row + 16
 
     return PackedImageData(width, height, GL_RGBA, GL_UNSIGNED_BYTE, out)
+
+
+def decode_bc5(data, width, height):
+    raise NotImplementedError()
