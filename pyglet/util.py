@@ -1,10 +1,13 @@
 """Various utility functions used internally by pyglet
 """
 
+import logging
 import os
 import sys
 
 import pyglet
+
+logger = logging.getLogger(__name__)
 
 
 def asbytes(s):
@@ -161,8 +164,10 @@ class CodecRegistry:
 
         for decoder in self.get_decoders(filename):
             try:
+                logger.debug(f"Trying decoder {decoder}")
                 return decoder.decode(filename, file, **kwargs)
             except DecodeException as e:
+                logger.debug(f"Failed decode {e}")
                 if not first_exception:
                     first_exception = e
                 if file:
@@ -170,8 +175,10 @@ class CodecRegistry:
 
         for decoder in self.get_decoders():
             try:
+                logger.debug(f"Trying decoder {decoder}")
                 return decoder.decode(filename, file, **kwargs)
-            except DecodeException:
+            except DecodeException as e:
+                logger.debug(f"Failed decode {e}")
                 if file:
                     file.seek(0)
 
