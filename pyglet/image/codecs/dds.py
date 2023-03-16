@@ -7,7 +7,7 @@ import struct
 import itertools
 
 from pyglet.gl import *
-from pyglet.image import CompressedImageData
+from pyglet.image import CompressedImageData, ImageData
 from pyglet.image import codecs
 from pyglet.image.codecs import s3tc, ImageDecodeException
 
@@ -157,10 +157,13 @@ class DDSImageDecoder(codecs.ImageDecoder):
         if desc.dwCaps2 & DDSCAPS2_CUBEMAP:
             raise ImageDecodeException('Cubemap DDS files unsupported')
 
-        if not desc.ddpfPixelFormat.dwFlags & DDPF_FOURCC:
-            raise ImageDecodeException('Uncompressed DDS textures not supported.')
+        # if not desc.ddpfPixelFormat.dwFlags & DDPF_FOURCC:
+        #     raise ImageDecodeException('Uncompressed DDS textures not supported.')
 
         has_alpha = desc.ddpfPixelFormat.dwRGBAlphaBitMask != 0
+
+        if desc.ddpfPixelFormat.dwFourCC == b'\0\0\0\0':
+            return make_rgb_dds_image(file, width, height, mipmaps)
 
         selector = (desc.ddpfPixelFormat.dwFourCC, has_alpha)
         if selector not in _compression_formats:
@@ -194,6 +197,28 @@ class DDSImageDecoder(codecs.ImageDecoder):
             image.set_mipmap_data(level, data)
 
         return image
+
+
+def make_rgb_dds_image(file, width, height, mipmaps):
+    size = width * height * 3
+    data = file.read(size)
+    image = ImageData(width, height, 'RGB', data)
+
+    w, h = width, height
+    for level in range(1, mipmaps):
+        w >>= 1
+        h >>= 1
+        if not w and not h:
+            break
+        if not w:
+            w = 1
+        if not h:
+            h = 1
+        size = w * h * 3
+        data = file.read(size)
+        image.set_mipmap_image(level, ImageData(w, h, 'RGB', data))
+        
+    return image
 
 
 def get_decoders():
