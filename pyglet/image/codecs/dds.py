@@ -121,6 +121,7 @@ _compression_formats = {
     (b'DXT5', False): ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
     (b'DXT5', True):  ('GL_EXT_texture_compression_s3tc', GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, s3tc.decode_dxt5),
     (b'DX10', False): ('GL_ARB_texture_compression_rgtc', GL_COMPRESSED_RG_RGTC2,           s3tc.decode_bc5),
+    (b'BC5U', False): ('GL_ARB_texture_compression_rgtc', GL_COMPRESSED_RG_RGTC2,           s3tc.decode_bc5),
 }
 
 
