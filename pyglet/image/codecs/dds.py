@@ -42,6 +42,24 @@ DDSCAPS2_CUBEMAP_POSITIVEZ  = 0x00004000
 DDSCAPS2_CUBEMAP_NEGATIVEZ  = 0x00008000
 DDSCAPS2_VOLUME 	        = 0x00200000
 
+# dxgiFormat of DDDXT10HEADER
+DXGI_FORMAT_UNKNOWN               = 0
+DXGI_FORMAT_R32G32B32A32_TYPELESS = 1
+DXGI_FORMAT_R32G32B32A32_FLOAT    = 2
+DXGI_FORMAT_R32G32B32A32_UINT     = 3
+DXGI_FORMAT_R32G32B32A32_SINT     = 4
+DXGI_FORMAT_R32G32B32_TYPELESS    = 5
+...
+DXGI_FORMAT_BC7_UNORM             = 98
+...
+
+# resourceDimension of DDDXT10HEADER
+D3D10_RESOURCE_DIMENSION_UNKNOWN = 0
+D3D10_RESOURCE_DIMENSION_BUFFER = 1
+D3D10_RESOURCE_DIMENSION_TEXTURE1D = 2
+D3D10_RESOURCE_DIMENSION_TEXTURE2D = 3
+D3D10_RESOURCE_DIMENSION_TEXTURE3D = 4
+
 
 class _FileStruct:
     _fields = []
@@ -138,6 +156,7 @@ class DDSImageDecoder(codecs.ImageDecoder):
         if desc.dwMagic != b'DDS ' or desc.dwSize != 124:
             raise ImageDecodeException('Invalid DDS file (incorrect header).')
 
+        dxt10_header = None
         if desc.ddpfPixelFormat.dwFourCC == b'DX10':
             dxt10_header_buf = file.read(DDDXT10HEADER.get_size())
             dxt10_header = DDDXT10HEADER(dxt10_header_buf)
@@ -175,6 +194,12 @@ class DDSImageDecoder(codecs.ImageDecoder):
             block_size = 8
         else:
             block_size = 16
+
+        if dxt10_header is not None:
+            if dxt10_header.resourceDimension != D3D10_RESOURCE_DIMENSION_TEXTURE2D:
+                raise ImageDecodeException('Unsupported DX10 resource dimension %d', dxt10_header.resourceDimension)
+            if dxt10_header.dxgiFormat == DXGI_FORMAT_BC7_UNORM:
+                extension, dformat = 'GL_ARB_texture_compression_bptc', GL_COMPRESSED_RGBA_BPTC_UNORM
 
         datas = []
         w, h = width, height
